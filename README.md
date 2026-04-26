@@ -60,7 +60,6 @@ Each task runs quality checks on completion and halts downstream tasks on failur
 - Phone values #ERROR! and negative numbers are corrupt source data — set to NULL
 - Customer names with embedded digits or special characters (e.g. Gary567 Hansen) are dirty, which are cleaned with regex
 - Duplicate product_id rows represent the same product across different states — deduplicated by keeping the lowest price row
-- Postal codes with fewer than 5 digits have had their leading zero stripped by Excel
 
 
 ## Design Decisions
