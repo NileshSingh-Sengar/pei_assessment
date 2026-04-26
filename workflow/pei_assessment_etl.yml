@@ -1,0 +1,93 @@
+# Databricks Asset Bundle — PEI Assessment ETL Workflow
+# Compute: Serverless (Databricks free tier)
+#
+# DAG:
+#   bronze_orders ──────────────────────────────────────────────────────┐
+#   bronze_customers → silver_dim_customer ─────────────────────────────┼─→ gold_fact_order → gold_aggregate_profit → insights
+#   bronze_products  → silver_dim_product ──────────────────────────────┘
+#
+# Deploy:
+#   pip install databricks-cli
+#   databricks configure --token
+#   databricks bundle deploy
+#   databricks bundle run pei_assessment_etl
+
+bundle:
+  name: pei_assessment
+
+resources:
+  jobs:
+    pei_assessment_etl:
+      name: pei_assessment_etl
+      max_concurrent_runs: 1
+
+      tasks:
+
+        # ── Bronze layer (parallel) ───────────────────────────────────
+        # No depends_on → Databricks runs all three simultaneously
+
+        - task_key: bronze_orders
+          description: Ingest Orders.json from UC Volume into bronze Delta table
+          notebook_task:
+            notebook_path: /Workspace/Shared/pei_assessment/bronze/01_orders_ingestion
+            source: WORKSPACE
+
+        - task_key: bronze_customers
+          description: Ingest Customer.xlsx from UC Volume into bronze Delta table
+          notebook_task:
+            notebook_path: /Workspace/Shared/pei_assessment/bronze/01_customers_ingestion
+            source: WORKSPACE
+
+        - task_key: bronze_products
+          description: Ingest Products.csv from UC Volume into bronze Delta table
+          notebook_task:
+            notebook_path: /Workspace/Shared/pei_assessment/bronze/01_products_ingestion
+            source: WORKSPACE
+
+        # ── Silver layer ──────────────────────────────────────────────
+
+        - task_key: silver_dim_customer
+          description: Clean customers — produce dim_customer + quarantine table
+          depends_on:
+            - task_key: bronze_customers
+          notebook_task:
+            notebook_path: /Workspace/Shared/pei_assessment/silver/02_dim_customer
+            source: WORKSPACE
+
+        - task_key: silver_dim_product
+          description: Deduplicate products — produce dim_product + quarantine table
+          depends_on:
+            - task_key: bronze_products
+          notebook_task:
+            notebook_path: /Workspace/Shared/pei_assessment/silver/02_dim_product
+            source: WORKSPACE
+
+        # ── Gold layer ────────────────────────────────────────────────
+
+        - task_key: gold_fact_order
+          description: Join orders with dimensions — produce fact_order partitioned by year
+          depends_on:
+            - task_key: bronze_orders
+            - task_key: silver_dim_customer
+            - task_key: silver_dim_product
+          notebook_task:
+            notebook_path: /Workspace/Shared/pei_assessment/gold/03_fact_order
+            source: WORKSPACE
+
+        - task_key: gold_aggregate_profit
+          description: Aggregate profit by year x category x sub_category x customer
+          depends_on:
+            - task_key: gold_fact_order
+          notebook_task:
+            notebook_path: /Workspace/Shared/pei_assessment/gold/04_aggregate_profit
+            source: WORKSPACE
+
+        # ── Insights ──────────────────────────────────────────────────
+
+        - task_key: insights
+          description: SQL profit insights by year, category, customer, customer+year
+          depends_on:
+            - task_key: gold_aggregate_profit
+          notebook_task:
+            notebook_path: /Workspace/Shared/pei_assessment/insights/05_profit_insights
+            source: WORKSPACE
