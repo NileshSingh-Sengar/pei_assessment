@@ -11,8 +11,8 @@
 spark.sql(f"""
     SELECT
         year,
-        round(sum(profit), 2) AS total_profit
-    FROM {GOLD}.fact_order
+        round(sum(total_profit), 2) AS total_profit
+    FROM {GOLD}.aggregate_profit
     GROUP BY year
     ORDER BY year
 """).display()
@@ -28,8 +28,8 @@ spark.sql(f"""
     SELECT
         year,
         category,
-        round(sum(profit), 2) AS total_profit
-    FROM {GOLD}.fact_order
+        round(sum(total_profit), 2) AS total_profit
+    FROM {GOLD}.aggregate_profit
     GROUP BY year, category
     ORDER BY year, category
 """).display()
@@ -45,8 +45,8 @@ spark.sql(f"""
     SELECT
         customer_id,
         customer_name,
-        round(sum(profit), 2) AS total_profit
-    FROM {GOLD}.fact_order
+        round(sum(total_profit), 2) AS total_profit
+    FROM {GOLD}.aggregate_profit
     GROUP BY customer_id, customer_name
     ORDER BY total_profit DESC
 """).display()
@@ -63,8 +63,8 @@ spark.sql(f"""
         customer_id,
         customer_name,
         year,
-        round(sum(profit), 2) AS total_profit
-    FROM {GOLD}.fact_order
+        round(sum(total_profit), 2) AS total_profit
+    FROM {GOLD}.aggregate_profit
     GROUP BY customer_id, customer_name, year
     ORDER BY total_profit DESC
 """).display()
